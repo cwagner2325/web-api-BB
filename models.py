@@ -5,6 +5,6 @@ import json
 
 
 class User(BaseModel):
-    guid: Optional[UUID] = uuid1().hex
+    guid: Optional[str] = str(uuid1().hex).upper()
     expiration: Optional[int] = 30
     user: str
