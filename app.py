@@ -1,4 +1,3 @@
-from typing import List
 from tornado.web import Application, RequestHandler
 from tornado.ioloop import IOLoop
 import json
@@ -6,32 +5,33 @@ from models import User
 
 items = []
 
+def get_filtered(id):
+    # Filters list and returns item with matching id
+    result = [item for item in items if item['id'] == int(id)]
+    return result
+
+class getPage(RequestHandler):
+    def get(self):
+        self.write(f'Output:\n: {items}')
 
 class getRequest(RequestHandler):
-    def get(self, id=None):
-        global items
-        if id is not None:
-            res = None
-            for item in items:
-                jsonItem = json.loads(item)
-                print(jsonItem['guid'])
-                print(id)
-                if str(jsonItem['guid']) is str(id):
-                    res = jsonItem
-                    print(res)
-
-            self.write({'Output': res})
+    def get(self, guid=None):
+        print('here:', guid)
+        if id:
+            item = get_filtered(id)
+            if item:
+                self.write(f'Output: {item}')
+            else:
+                self.set_status(404, "GUID Not Found")
         else:
-            self.write({"Output:\n": items})
+            self.set_status(404, "Page Not Found")
 
 
 class postRequest(RequestHandler):
-    print('reached')
     def post(self):
         global items
         user = User(user="Cayden Wagner")
         jsonUser = (json.dumps(user.__dict__))
-
         items.append(jsonUser)
         self.write(f'Output: {jsonUser}')
 
@@ -45,11 +45,12 @@ class postRequest(RequestHandler):
 
 def make_app():
     urls = [
-        ("/", getRequest),
-        (r"/guid/[({]?[a-fA-F0-9]{8}[-]?([a-fA-F0-9]{4}[-]?){3}[a-fA-F0-9]{12}[})]?", getRequest),
+        ("/", getPage),
+        (r"/guid", getRequest),
         (r"/guid/[({]?[a-fA-F0-9]{32}[})]?", postRequest),
         (r"/guid", postRequest),
     ]
+
     return Application(urls, debug=True)
 
 
