@@ -49,26 +49,43 @@ class getUser(RequestHandler):
         else:
             self.write("400 No Guid Provided")
 
+
+    # if no guid is provided, create a new user with a random guid
+    # if a nonvalid guid is provided, throw an error
+    # if an exisiting guid is provided, begin editing that existing user
+    # if a non-existing guid is provided, create a new user with that guid
+
     def post(self):
         guid = getGUIDFromPath(self.request.path)
-        user = None 
+        user = None
         if guid:
-            item = get_filtered(guid)
-            if item:
-                self.write(f'editing {item}')
-                return
-            elif isValidGUID(guid):
-                user = User(guid=guid, user="Cayden")
+            if isValidGUID(guid):
+                item = get_filtered(guid)
+                if item:
+                    self.write(f'editing {item}')
+                    return
+                else:
+                    user = User(guid=guid, user="Cayden")
             else:
-                print('reached2')
                 self.write("400 Invalid GUID Provided")
                 return
         else:
-            print('reached3')
             user = User(user="Cayden")
 
         items.append(json.dumps(user.__dict__))
         self.write(f'Output: {user}')
+
+
+# Throws 404 page not found error for all URLs that don't match
+class handleURL(RequestHandler):
+    def post(self):
+        self.write("404 Page Not Found")
+
+    def get(self):
+        self.write("404 Page Not Found")
+
+    def delete(self):
+        self.write("404 Page Not Found")
 
     # def delete(self, id):
     #     global items
@@ -82,6 +99,7 @@ def make_app():
         ("/", getPage),
         (r"/guid/[({]?[a-fA-F0-9]{0,50}[})]?", getUser),
         (r"/guid", getUser),
+        (r"/.*", handleURL)
     ]
 
     return Application(urls, debug=True)
