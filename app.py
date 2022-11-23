@@ -14,7 +14,7 @@ class getPage(RequestHandler):
     def get(self):
         self.write(f'Output:\n: {items}')
 
-class getRequest(RequestHandler):
+class getUser(RequestHandler):
     def get(self, guid=None):
         print('here:', guid)
         if id:
@@ -26,8 +26,6 @@ class getRequest(RequestHandler):
         else:
             self.set_status(404, "Page Not Found")
 
-
-class postRequest(RequestHandler):
     def post(self):
         global items
         user = User(user="Cayden Wagner")
@@ -46,9 +44,9 @@ class postRequest(RequestHandler):
 def make_app():
     urls = [
         ("/", getPage),
-        (r"/guid", getRequest),
-        (r"/guid/[({]?[a-fA-F0-9]{32}[})]?", postRequest),
-        (r"/guid", postRequest),
+        (r"/guid", getUser),
+        (r"/guid/[({]?[a-fA-F0-9]{32}[})]?", getUser),
+        (r"/guid", getUser),
     ]
 
     return Application(urls, debug=True)
