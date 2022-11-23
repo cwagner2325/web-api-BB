@@ -14,7 +14,7 @@ items = []
 
 def get_filtered(id):
     for user in items:
-        jsonUser = (json.loads(user))
+        jsonUser = json.loads(user)
         if jsonUser['guid'] == id:
             return jsonUser
     return None
@@ -23,7 +23,6 @@ def get_filtered(id):
 # Takes path (example /guid/9094E4C980C74043A4B586B420E69DDF)
 # and returns just the guid (9094E4C980C74043A4B586B420E69DDF)
 def getGUIDFromPath(path):
-    print(path[6:])
     return path[6:]
 
 
@@ -54,8 +53,11 @@ class getUser(RequestHandler):
         guid = getGUIDFromPath(self.request.path)
         user = None 
         if guid:
-            print('reached')
-            if isValidGUID(guid):
+            item = get_filtered(guid)
+            if item:
+                self.write(f'editing {item}')
+                return
+            elif isValidGUID(guid):
                 user = User(guid=guid, user="Cayden")
             else:
                 print('reached2')
@@ -65,7 +67,7 @@ class getUser(RequestHandler):
             print('reached3')
             user = User(user="Cayden")
 
-        items.append(user)
+        items.append(json.dumps(user.__dict__))
         self.write(f'Output: {user}')
 
     # def delete(self, id):
