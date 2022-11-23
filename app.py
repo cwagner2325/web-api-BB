@@ -65,12 +65,20 @@ class getUser(RequestHandler):
                     self.write(f'editing {item}')
                     return
                 else:
+                    name = self.get_body_argument('user', None)
+                    print(name)
                     user = User(guid=guid, user="Cayden")
             else:
                 self.write("400 Invalid GUID Provided")
                 return
         else:
-            user = User(user="Cayden")
+            data = json.loads(self.request.body)
+
+            guid=data['guid']
+            expiration = data['expiration']
+            name = data['user']
+
+            user = User(guid=guid, expiration=expiration, user=name)
 
         items.append(json.dumps(user.__dict__))
         self.write(f'Output: {user}')
