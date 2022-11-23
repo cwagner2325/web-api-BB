@@ -29,7 +29,7 @@ def getGUIDFromPath(path):
 # Checks if a string is 32 bits of hex all uppercase, returns true
 def isValidGUID(path):
     regex = re.compile('[({]?[A-F0-9]{32}[})]?')
-    return regex.match(path)
+    return regex.match(str(path)) and regex.match(str(path).upper())
 
 
 def isValidExpiration(expiration):
@@ -39,14 +39,15 @@ def isValidExpiration(expiration):
         return False
 
 
-def makeUserObject(data):
-    guid = None
+def makeUserObject(data, guid=None):
     expiration = None
     user = None
 
-    if 'guid' in data:
+    if guid == None and 'guid' in data:
+        print('reached', guid)
         if isValidGUID(data['guid']):
             guid = data['guid']
+
     if 'expiration' in data:
         if isValidExpiration(data['expiration']):
             expiration = data['expiration']
@@ -92,6 +93,7 @@ class getUser(RequestHandler):
 
     def post(self):
         guid = getGUIDFromPath(self.request.path)
+        print(guid)
         user = None
         if guid:
             if isValidGUID(guid):
@@ -100,9 +102,8 @@ class getUser(RequestHandler):
                     self.write(f'editing {item}')
                     return
                 else:
-                    name = self.get_body_argument('user', None)
-                    print(name)
-                    user = User(guid=guid, user="Cayden")
+                    data = json.loads(self.request.body)
+                    user = makeUserObject(data, guid)
             else:
                 self.write("400 Invalid GUID Provided")
                 return
