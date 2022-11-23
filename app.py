@@ -1,4 +1,4 @@
-from os import path
+import time
 from requests import request
 from tornado.web import Application, RequestHandler
 from tornado.ioloop import IOLoop
@@ -32,6 +32,42 @@ def isValidGUID(path):
     return regex.match(path)
 
 
+def isValidExpiration(expiration):
+    try:
+        return int(expiration) > int(time.time())
+    except:
+        return False
+
+
+def makeUserObject(data):
+    guid = None
+    expiration = None
+    user = None
+
+    if 'guid' in data:
+        if isValidGUID(data['guid']):
+            guid = data['guid']
+    if 'expiration' in data:
+        if isValidExpiration(data['expiration']):
+            expiration = data['expiration']
+    if 'user' in data:
+        name = data['user']
+    else:
+        return user
+
+    if guid:
+        if expiration:
+            user = User(guid=guid, expiration=expiration, user=name)
+        else:
+            user = User(guid=guid, user=name)
+    elif expiration:
+        user = User(expiration=expiration, user=name)
+    else:
+        user = User(user=name)
+
+    return user
+
+
 class getPage(RequestHandler):
     def get(self):
         self.write(f'Output:\n: {items}')
@@ -48,7 +84,6 @@ class getUser(RequestHandler):
                 self.write('400 User Not Found')
         else:
             self.write("400 No Guid Provided")
-
 
     # if no guid is provided, create a new user with a random guid
     # if a nonvalid guid is provided, throw an error
@@ -73,12 +108,10 @@ class getUser(RequestHandler):
                 return
         else:
             data = json.loads(self.request.body)
-
-            guid=data['guid']
-            expiration = data['expiration']
-            name = data['user']
-
-            user = User(guid=guid, expiration=expiration, user=name)
+            user = makeUserObject(data)
+            if not user:
+                self.write("400 No User Name Provided")
+                return
 
         items.append(json.dumps(user.__dict__))
         self.write(f'Output: {user}')
