@@ -4,20 +4,7 @@ from tornado.ioloop import IOLoop
 import json
 from models import User
 
-items = [
-    {
-        "id": 1,
-        "name": "test1"
-    },
-    {
-        "id": 2,
-        "name": "test2"
-    },
-    {
-        "id": 3,
-        "name": "test3"
-    }
-]
+items = []
 
 
 class getRequest(RequestHandler):
@@ -31,22 +18,15 @@ class getRequest(RequestHandler):
 
 
 class postRequest(RequestHandler):
-    global items
     print('reached')
-    def post(self, id=None):
-        if id is not None:
-            print('reached2')
-            user = [item for item in items if item['id'] is int(id)]
-            print( f'editing {user}')
-        else:
-            print('reached3')
-            user = {
-                "id": 5,
-                "name": "newAddition"
-            }
-            newItems = items.append(user)
-            items = newItems
-            self.write({"Output:\n": newItems})
+    def post(self):
+        global items
+        user = User(user="Cayden Wagner")
+        jsonUser = (json.dumps(user.__dict__))
+        
+        items.append(jsonUser)
+        print(items)
+        self.write(f'Output: {items}')
 
 
     # def delete(self, id):
@@ -61,7 +41,7 @@ def make_app():
         ("/", getRequest),
         (r"/guid/([^/]+)?", getRequest),
         (r"/guid/([^/]+)?", postRequest),
-        (r"/guid/", postRequest),
+        (r"/guid", postRequest),
     ]
     return Application(urls, debug=True)
 
