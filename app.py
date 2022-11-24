@@ -1,18 +1,22 @@
 import time
-from requests import request
 from tornado.web import Application, RequestHandler
 from tornado.ioloop import IOLoop
 import json
 import re
 from models import User
+from pymongo import MongoClient
+from schemas import userEntity, usersEntity
+import certifi
 
 global items
 items = []
+global cluster, db, collection
 
 # Filters list of users for a specific id and returns the user with matching id
 
 
 def get_filtered(id):
+    global items
     for user in items:
         jsonUser = json.loads(user)
         if jsonUser['guid'] == id:
@@ -32,6 +36,7 @@ def isValidGUID(path):
     return regex.match(str(path)) and regex.match(str(path).upper())
 
 
+# checks if a time is a validint and present time
 def isValidExpiration(expiration):
     try:
         return int(expiration) > int(time.time())
@@ -39,12 +44,14 @@ def isValidExpiration(expiration):
         return False
 
 
+# makes a user object using the body of a request
+# if variables are invalid or missing, it uses default values
+# returns None if no user name was given
 def makeUserObject(data, guid=None):
     expiration = None
     user = None
 
     if guid == None and 'guid' in data:
-        print('reached', guid)
         if isValidGUID(data['guid']):
             guid = data['guid']
 
@@ -71,29 +78,31 @@ def makeUserObject(data, guid=None):
 
 class getPage(RequestHandler):
     def get(self):
-        self.write(f'Output:\n: {items}')
+        res = (usersEntity(collection.find()))
+        self.write({'Output': res})
 
 
 class getUser(RequestHandler):
     def get(self):
         guid = getGUIDFromPath(self.request.path)
         if guid:
+            #check cache
             item = get_filtered(guid)
-            if item:
-                self.write(f'Output: {item}')
-            else:
+            #if not in cache, query database
+            if not item:
+                item = collection.find({"guid": guid })
+            if not item: 
                 self.write('400 User Not Found')
+                return
+            self.write({'Output': item})
         else:
             self.write("400 No Guid Provided")
 
-    # if no guid is provided, create a new user with a random guid
-    # if a nonvalid guid is provided, throw an error
-    # if an exisiting guid is provided, begin editing that existing user
-    # if a non-existing guid is provided, create a new user with that guid
+    def delete(self):
+        guid = getGUIDFromPath(self.request.path)
 
     def post(self):
         guid = getGUIDFromPath(self.request.path)
-        print(guid)
         user = None
         if guid:
             if isValidGUID(guid):
@@ -116,6 +125,7 @@ class getUser(RequestHandler):
 
         items.append(json.dumps(user.__dict__))
         self.write(f'Output: {user}')
+        collection.insert_one(dict(user))
 
 
 # Throws 404 page not found error for all URLs that don't match
@@ -148,6 +158,16 @@ def make_app():
 
 
 if __name__ == '__main__':
+    username = input("Enter mongodb username: ")
+    password = input("Enter mongodb password: ")
+
+    cluster = MongoClient(
+        f'mongodb+srv://{username}:{password}@cluster0.s5krs43.mongodb.net/test', tlsCAFile=certifi.where())
+    db = cluster['users']
+    collection = db['users']
+
+    print('Success')
+
     app = make_app()
     app.listen(3000)
     IOLoop.instance().start()
