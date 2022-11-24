@@ -102,7 +102,9 @@ class getUser(RequestHandler):
 
     def delete(self):
         guid = getGUIDFromPath(self.request.path)
-        collection.delete_one({"guid" : guid})
+        res = collection.delete_one({"guid" : guid})
+        if res.deleted_count == 0:
+            self.write('400 User Not Found')
 
     def post(self):
         guid = getGUIDFromPath(self.request.path)
