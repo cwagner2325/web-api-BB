@@ -90,16 +90,19 @@ class getUser(RequestHandler):
             item = get_filtered(guid)
             #if not in cache, query database
             if not item:
-                item = collection.find({"guid": guid })
+                res = collection.find_one({"guid": guid })
+                if res:
+                    item = userEntity(res)
             if not item: 
                 self.write('400 User Not Found')
                 return
-            self.write({'Output': item})
+            self.write(f'Output: {item}')
         else:
             self.write("400 No Guid Provided")
 
     def delete(self):
         guid = getGUIDFromPath(self.request.path)
+        collection.delete_one({"guid" : guid})
 
     def post(self):
         guid = getGUIDFromPath(self.request.path)
