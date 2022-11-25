@@ -1,7 +1,7 @@
 from uuid import uuid1
 import time
 
-THIRTY_DAYS_IN_SEC = 2592000
+THIRTY_DAYS_IN_SEC = 60
 
 class User:
     def  __init__(self, user, guid=None, expire=None):

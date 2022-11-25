@@ -7,22 +7,34 @@ from models import User
 from pymongo import MongoClient
 from schemas import userEntity, usersEntity
 import certifi
-from uuid import uuid1
+import schedule
 
-global items
-items = []
+global cache
+cache = {}
 global cluster, db, collection
 
-# Filters list of users for a specific id and returns the user with matching id
+# Adds a user to cache if not already in cache
+# Keys is guid, value is user
+def addToCache(user):
+    if user['guid'] not in cache.keys():
+        cache[user['guid']] = user
 
+def deleteExpiredFromCache():
+    for user in cache.values():
+        if user['expire'] < time.time():
+            del cache[user['guid']]
+            print(f'deleting {user} from cache')
 
-def get_filtered(id):
-    global items
-    for user in items:
-        jsonUser = json.loads(user)
-        if jsonUser['guid'] == id:
-            return jsonUser
+def getFromCache(guid):
+    if guid in cache.keys():
+        return cache[guid]
     return None
+
+
+def deleteExpired():
+    res = collection.delete_many({"expire": { "$lt" : time.time() }})
+    if res.deleted_count > 0:
+        deleteExpiredFromCache()
 
 
 # Takes path (example /guid/9094E4C980C74043A4B586B420E69DDF)
@@ -80,6 +92,8 @@ def makeUserObject(data, guid=None):
 class getPage(RequestHandler):
     def get(self):
         res = (usersEntity(collection.find()))
+        for user in res:
+            addToCache(user)
         self.write({'Output': res})
 
 
@@ -88,12 +102,13 @@ class getUser(RequestHandler):
         guid = getGUIDFromPath(self.request.path)
         if guid:
             #check cache
-            item = get_filtered(guid)
+            item = getFromCache(guid)
             #if not in cache, query database
             if not item:
                 res = collection.find_one({"guid": guid })
                 if res:
                     item = userEntity(res)
+                    addToCache(item)
             if not item: 
                 self.write('400 User Not Found')
                 return
@@ -129,7 +144,6 @@ class getUser(RequestHandler):
                 self.write("400 No User Name Provided")
                 return
 
-        items.append(json.dumps(user.__dict__))
         self.write(f'Output: {user}')
         collection.insert_one(user.__dict__)
 
@@ -144,13 +158,6 @@ class handleURL(RequestHandler):
 
     def delete(self):
         self.write("404 Page Not Found")
-
-    # def delete(self, id):
-    #     global items
-    #     new_items = [item for item in items if item['id'] is not int(id)]
-    #     items = new_items
-    #     self.write({'message': 'Item with id %s was deleted' % id})
-
 
 def make_app():
     urls = [
@@ -174,6 +181,9 @@ if __name__ == '__main__':
 
     print('Success')
 
+    deleteExpired()
+
     app = make_app()
     app.listen(3000)
     IOLoop.instance().start()
+  #  schedule.every(10).seconds.do(deleteExpired())
