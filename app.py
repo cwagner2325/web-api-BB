@@ -7,6 +7,7 @@ from models import User
 from pymongo import MongoClient
 from schemas import userEntity, usersEntity
 import certifi
+from uuid import uuid1
 
 global items
 items = []
@@ -37,9 +38,9 @@ def isValidGUID(path):
 
 
 # checks if a time is a validint and present time
-def isValidExpiration(expiration):
+def isValidExpiration(expire):
     try:
-        return int(expiration) > int(time.time())
+        return int(expire) > int(time.time())
     except:
         return False
 
@@ -48,28 +49,28 @@ def isValidExpiration(expiration):
 # if variables are invalid or missing, it uses default values
 # returns None if no user name was given
 def makeUserObject(data, guid=None):
-    expiration = None
+    expire = None
     user = None
 
     if guid == None and 'guid' in data:
         if isValidGUID(data['guid']):
             guid = data['guid']
 
-    if 'expiration' in data:
-        if isValidExpiration(data['expiration']):
-            expiration = data['expiration']
+    if 'expire' in data:
+        if isValidExpiration(data['expire']):
+            expire = data['expire']
     if 'user' in data:
         name = data['user']
     else:
         return user
 
     if guid:
-        if expiration:
-            user = User(guid=guid, expiration=expiration, user=name)
+        if expire:
+            user = User(guid=guid, expire=expire, user=name)
         else:
             user = User(guid=guid, user=name)
-    elif expiration:
-        user = User(expiration=expiration, user=name)
+    elif expire:
+        user = User(expire=expire, user=name)
     else:
         user = User(user=name)
 
@@ -163,6 +164,10 @@ def make_app():
 
 
 if __name__ == '__main__':
+    user = User(user="Bob")
+    user2 = User(user="Bob2")
+    print(user)
+    print(user2)
     username = input("Enter mongodb username: ")
     password = input("Enter mongodb password: ")
 
