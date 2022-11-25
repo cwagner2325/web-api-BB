@@ -5,7 +5,7 @@ import re
 import time
 from models import User
 from pymongo import MongoClient
-from schemas import userEntity
+from schemas import userEntity, usersEntity
 import certifi
 
 global cache
@@ -86,6 +86,14 @@ def makeUserObject(data, guid=None):
 
     return User(guid=guid, expire=expire, user=user)
 
+#Gets all contents of database (For debugging purposes)
+class getPage(RequestHandler):
+    def get(self):
+        res = (usersEntity(collection.find()))
+        for user in res:
+            addToCache(user)
+        self.write({'Output': res})
+
 class getUser(RequestHandler):
     def get(self):
         guid = getGUIDFromPath(self.request.path)
@@ -157,6 +165,7 @@ class handleURL(RequestHandler):
 
 def make_app():
     urls = [
+         ("/", getPage),
         (r"/guid/[({]?[a-fA-F0-9]{0,50}[})]?", getUser),
         (r"/guid", getUser),
         (r"/.*", handleURL)
