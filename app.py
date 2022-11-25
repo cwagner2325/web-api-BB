@@ -1,6 +1,5 @@
 from tornado.web import Application, RequestHandler
 from tornado.ioloop import IOLoop
-from tornado import options, locks
 import json
 import re
 import time
@@ -8,9 +7,6 @@ from models import User
 from pymongo import MongoClient
 from schemas import userEntity, usersEntity
 import certifi
-import schedule
-import signal
-
 global cache
 cache = {}
 global cluster, db, collection

@@ -31,6 +31,6 @@ print("\nDisplay all contents of database (Just for debugging purposes)\nInput:"
 print("curl http://localhost:3000/")
 
 os.system("curl http://localhost:3000/")
-
+ 
 print('\n\n')
 

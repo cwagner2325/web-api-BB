@@ -10,4 +10,4 @@ class User:
         self.user = user
 
     def __str__(self):
-        return f'guid: {self.guid}, expire: {self.expire}, user: {self.user}'
+        return f'guid: {self.guid}, expire: {self.expire}, user: {self.user}' 
