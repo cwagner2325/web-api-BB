@@ -1,5 +1,6 @@
 from tornado.web import Application, RequestHandler
 from tornado.ioloop import IOLoop
+from tornado import options, locks
 import json
 import re
 import time
@@ -8,6 +9,7 @@ from pymongo import MongoClient
 from schemas import userEntity, usersEntity
 import certifi
 import schedule
+import signal
 
 global cache
 cache = {}
@@ -38,14 +40,14 @@ def updateCache(user):
     if user['guid'] in cache.keys():
         cache[user['guid']] = user
 
-#If the guid is a key in the cache, delete it
+# If the guid is a key in the cache, delete it
 def deleteFromCache(guid):
     if guid in cache.keys():
         del cache[guid]
 
 # Deletes data entries with expired expiration in MongoDB
 def deleteExpired():
-    res = collection.delete_many({"expire": { "$lte" : time.time() }})
+    res = collection.delete_many({"expire": {"$lte": time.time()}})
     if res.deleted_count > 0:
         deleteExpiredFromCache()
 
@@ -92,29 +94,30 @@ def makeUserObject(data, guid=None):
 
     return User(guid=guid, expire=expire, user=user)
 
-#Gets all contents of database (For debugging purposes)
+# Gets all contents of database (For debugging purposes)
 class getPage(RequestHandler):
     def get(self):
         deleteExpired()
         res = (usersEntity(collection.find()))
         for user in res:
             addToCache(user)
-        self.write({'Output': res})
+        self.write(f'Output: {res}')
+
 
 class getUser(RequestHandler):
     def get(self):
         deleteExpired()
         guid = getGUIDFromPath(self.request.path)
         if guid:
-            #check cache
+            # check cache
             item = getFromCache(guid)
-            #if not in cache, query database
+            # if not in cache, query database
             if not item:
-                res = collection.find_one({"guid": guid })
+                res = collection.find_one({"guid": guid})
                 if res:
                     item = userEntity(res)
                     addToCache(item)
-            if not item: 
+            if not item:
                 self.write('400 User Not Found')
                 return
             self.write(f'Output: {item}')
@@ -124,7 +127,7 @@ class getUser(RequestHandler):
     def delete(self):
         deleteExpired()
         guid = getGUIDFromPath(self.request.path)
-        res = collection.delete_one({"guid" : guid})
+        res = collection.delete_one({"guid": guid})
         deleteFromCache(guid)
         if res.deleted_count == 0:
             self.write('400 User Not Found')
@@ -151,14 +154,14 @@ class getUser(RequestHandler):
         self.write(f'Output: {{{user}}}')
 
         userDict = user.__dict__
-        res = collection.find_one({"guid" : userDict["guid"] })
+        res = collection.find_one({"guid": userDict["guid"]})
 
         if res:
-            #Replacing exisitng object with new data
-            collection.replace_one({"guid" : userDict["guid"]}, userDict )
+            # Replacing exisitng object with new data
+            collection.replace_one({"guid": userDict["guid"]}, userDict)
             updateCache(userDict)
         else:
-            #posting new user
+            # posting new user
             collection.insert_one(userDict)
             addToCache(userDict)
 
@@ -174,9 +177,10 @@ class handleURL(RequestHandler):
     def delete(self):
         self.write("404 Page Not Found")
 
+
 def make_app():
     urls = [
-         ("/", getPage),
+        ("/", getPage),
         (r"/guid/[({]?[a-fA-F0-9]{0,50}[})]?", getUser),
         (r"/guid", getUser),
         (r"/.*", handleURL)
@@ -189,7 +193,7 @@ if __name__ == '__main__':
     username = input("Enter mongodb username: ")
     password = input("Enter mongodb password: ")
 
-    try: 
+    try:
         cluster = MongoClient(
             f'mongodb+srv://{username}:{password}@cluster0.s5krs43.mongodb.net/test', tlsCAFile=certifi.where())
         db = cluster['users']
