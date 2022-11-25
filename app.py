@@ -1,13 +1,12 @@
-import time
 from tornado.web import Application, RequestHandler
 from tornado.ioloop import IOLoop
 import json
 import re
+import time
 from models import User
 from pymongo import MongoClient
-from schemas import userEntity, usersEntity
+from schemas import userEntity
 import certifi
-import schedule
 
 global cache
 cache = {}
@@ -87,15 +86,6 @@ def makeUserObject(data, guid=None):
 
     return User(guid=guid, expire=expire, user=user)
 
-
-class getPage(RequestHandler):
-    def get(self):
-        res = (usersEntity(collection.find()))
-        for user in res:
-            addToCache(user)
-        self.write({'Output': res})
-
-
 class getUser(RequestHandler):
     def get(self):
         guid = getGUIDFromPath(self.request.path)
@@ -139,11 +129,11 @@ class getUser(RequestHandler):
             self.write("400 No User Name Provided")
             return
 
-        self.write(f'Output: {user}')
+        self.write(f'Output: {{{user}}}')
 
         userDict = user.__dict__
         res = collection.find_one({"guid" : userDict["guid"] })
-        
+
         if res:
             #Replacing exisitng object with new data
             collection.replace_one({"guid" : userDict["guid"]}, userDict )
@@ -167,7 +157,6 @@ class handleURL(RequestHandler):
 
 def make_app():
     urls = [
-        ("/", getPage),
         (r"/guid/[({]?[a-fA-F0-9]{0,50}[})]?", getUser),
         (r"/guid", getUser),
         (r"/.*", handleURL)
