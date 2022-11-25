@@ -19,18 +19,26 @@ def addToCache(user):
     if user['guid'] not in cache.keys():
         cache[user['guid']] = user
 
+# iterates through cache and deletes expired users
 def deleteExpiredFromCache():
     for user in cache.values():
         if user['expire'] < time.time():
             del cache[user['guid']]
             print(f'deleting {user} from cache')
 
+# returns user from cache and None if not found
 def getFromCache(guid):
     if guid in cache.keys():
         return cache[guid]
     return None
 
+# Updates a user in cache if it exists
+# Does not add user to cache if it doesn't exist
+def updateCache(user):
+    if user['guid'] in cache.keys():
+        cache[user['guid']] = user
 
+# Deletes data entries with expired expiration in MongoDB
 def deleteExpired():
     res = collection.delete_many({"expire": { "$lt" : time.time() }})
     if res.deleted_count > 0:
@@ -71,22 +79,13 @@ def makeUserObject(data, guid=None):
     if 'expire' in data:
         if isValidExpiration(data['expire']):
             expire = data['expire']
+
     if 'user' in data:
-        name = data['user']
+        user = data['user']
     else:
-        return user
+        return None
 
-    if guid:
-        if expire:
-            user = User(guid=guid, expire=expire, user=name)
-        else:
-            user = User(guid=guid, user=name)
-    elif expire:
-        user = User(expire=expire, user=name)
-    else:
-        user = User(user=name)
-
-    return user
+    return User(guid=guid, expire=expire, user=user)
 
 
 class getPage(RequestHandler):
@@ -127,25 +126,32 @@ class getUser(RequestHandler):
         user = None
         if guid:
             if isValidGUID(guid):
-                item = get_filtered(guid)
-                if item:
-                    self.write(f'editing {item}')
-                    return
-                else:
-                    data = json.loads(self.request.body)
-                    user = makeUserObject(data, guid)
+                data = json.loads(self.request.body)
+                user = makeUserObject(data, guid)
             else:
                 self.write("400 Invalid GUID Provided")
                 return
         else:
             data = json.loads(self.request.body)
             user = makeUserObject(data)
-            if not user:
-                self.write("400 No User Name Provided")
-                return
+
+        if not user:
+            self.write("400 No User Name Provided")
+            return
 
         self.write(f'Output: {user}')
-        collection.insert_one(user.__dict__)
+
+        userDict = user.__dict__
+        res = collection.find_one({"guid" : userDict["guid"] })
+        
+        if res:
+            #Replacing exisitng object with new data
+            collection.replace_one({"guid" : userDict["guid"]}, userDict )
+            updateCache(userDict)
+        else:
+            #posting new user
+            collection.insert_one(userDict)
+            addToCache(userDict)
 
 
 # Throws 404 page not found error for all URLs that don't match
@@ -174,14 +180,16 @@ if __name__ == '__main__':
     username = input("Enter mongodb username: ")
     password = input("Enter mongodb password: ")
 
-    cluster = MongoClient(
-        f'mongodb+srv://{username}:{password}@cluster0.s5krs43.mongodb.net/test', tlsCAFile=certifi.where())
-    db = cluster['users']
-    collection = db['users']
-
-    print('Success')
-
-    deleteExpired()
+    try: 
+        cluster = MongoClient(
+            f'mongodb+srv://{username}:{password}@cluster0.s5krs43.mongodb.net/test', tlsCAFile=certifi.where())
+        db = cluster['users']
+        collection = db['users']
+        deleteExpired()
+        print('Success')
+    except:
+        print("error connecting to mongodb")
+        quit()
 
     app = make_app()
     app.listen(3000)
