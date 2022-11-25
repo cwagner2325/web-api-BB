@@ -1,7 +1,7 @@
 def userEntity(item) -> dict: 
   return {
     "guid":str(item["guid"]),
-    "expiration":int(item["expiration"]),
+    "expire":int(item["expire"]),
     "user":str(item["user"]),
   }
 
