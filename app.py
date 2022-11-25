@@ -131,7 +131,7 @@ class getUser(RequestHandler):
 
         items.append(json.dumps(user.__dict__))
         self.write(f'Output: {user}')
-        collection.insert_one(dict(user))
+        collection.insert_one(user.__dict__)
 
 
 # Throws 404 page not found error for all URLs that don't match
@@ -164,10 +164,6 @@ def make_app():
 
 
 if __name__ == '__main__':
-    user = User(user="Bob")
-    user2 = User(user="Bob2")
-    print(user)
-    print(user2)
     username = input("Enter mongodb username: ")
     password = input("Enter mongodb password: ")
 
