@@ -27,8 +27,10 @@ print("curl -X DELETE http://localhost:3000/guid/09118F5A6C7811EDBD4F88E9FE73359
 
 os.system("curl -X DELETE http://localhost:3000/guid/09118F5A6C7811EDBD4F88E9FE733593")
 
-print("\n\Display all contents of database (Just for debugging purposes):")
+print("\nDisplay all contents of database (Just for debugging purposes)\nInput:")
 print("curl http://localhost:3000/")
 
 os.system("curl http://localhost:3000/")
+
+print('\n\n')
 

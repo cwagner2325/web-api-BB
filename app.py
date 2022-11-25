@@ -7,6 +7,7 @@ from models import User
 from pymongo import MongoClient
 from schemas import userEntity, usersEntity
 import certifi
+import schedule
 
 global cache
 cache = {}
@@ -37,9 +38,14 @@ def updateCache(user):
     if user['guid'] in cache.keys():
         cache[user['guid']] = user
 
+#If the guid is a key in the cache, delete it
+def deleteFromCache(guid):
+    if guid in cache.keys():
+        del cache[guid]
+
 # Deletes data entries with expired expiration in MongoDB
 def deleteExpired():
-    res = collection.delete_many({"expire": { "$lt" : time.time() }})
+    res = collection.delete_many({"expire": { "$lte" : time.time() }})
     if res.deleted_count > 0:
         deleteExpiredFromCache()
 
@@ -89,6 +95,7 @@ def makeUserObject(data, guid=None):
 #Gets all contents of database (For debugging purposes)
 class getPage(RequestHandler):
     def get(self):
+        deleteExpired()
         res = (usersEntity(collection.find()))
         for user in res:
             addToCache(user)
@@ -96,6 +103,7 @@ class getPage(RequestHandler):
 
 class getUser(RequestHandler):
     def get(self):
+        deleteExpired()
         guid = getGUIDFromPath(self.request.path)
         if guid:
             #check cache
@@ -114,12 +122,15 @@ class getUser(RequestHandler):
             self.write("400 No Guid Provided")
 
     def delete(self):
+        deleteExpired()
         guid = getGUIDFromPath(self.request.path)
         res = collection.delete_one({"guid" : guid})
+        deleteFromCache(guid)
         if res.deleted_count == 0:
             self.write('400 User Not Found')
 
     def post(self):
+        deleteExpired()
         guid = getGUIDFromPath(self.request.path)
         user = None
         if guid:
@@ -183,13 +194,11 @@ if __name__ == '__main__':
             f'mongodb+srv://{username}:{password}@cluster0.s5krs43.mongodb.net/test', tlsCAFile=certifi.where())
         db = cluster['users']
         collection = db['users']
-        deleteExpired()
         print('Success')
-    except:
-        print("error connecting to mongodb")
+    except ValueError:
+        print(ValueError)
         quit()
 
     app = make_app()
     app.listen(3000)
     IOLoop.instance().start()
-  #  schedule.every(10).seconds.do(deleteExpired())
